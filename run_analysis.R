@@ -1,11 +1,16 @@
 ##This is R code used to create a tidy data set for the Coursera Data Science course
 ##Getting and Cleaning Data
 
+#Set Working Directory to a folder that you can download the zip file to 
 setwd("~/Desktop/DataScience/Data")
+
+#Download file, unzip, and set the new working directory to the UCI HAR Dataset
 fileurl <- "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
 download.file(fileurl, destfile = "HumanActivity.zip")
 unzip("HumanActivity.zip")
 setwd("./UCI HAR Dataset")
+
+#load necessary packages for data manipulation
 library(plyr)   #initiate the PLYR package to allow Join commands
 library(dplyr)  #initiate the DPLYR package to allow data frame manipulation   
 

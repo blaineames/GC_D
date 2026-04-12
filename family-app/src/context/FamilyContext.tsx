@@ -161,7 +161,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   }, [setState]);
 
   const clearCheckedItems = useCallback(() => {
-    setState(s => ({ ...s, shoppingItems: s.shoppingItems.filter(i => !i.checked) }));
+    setState(s => ({ ...s, shoppingItems: s.shoppingItems.map(i => ({ ...i, checked: false })) }));
   }, [setState]);
 
   // Events

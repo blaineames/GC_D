@@ -77,7 +77,7 @@ export function Shopping() {
         <div className="flex gap-2">
           {grouped.checked.length > 0 && (
             <Button variant="secondary" size="sm" onClick={clearCheckedItems}>
-              Clear Checked
+              Uncheck All
             </Button>
           )}
           <Button onClick={() => setModalOpen(true)} size="sm"><Plus size={16} /> Add Item</Button>

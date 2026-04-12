@@ -23,9 +23,12 @@ const SEED_CHORES: Chore[] = [
 ];
 
 const SEED_SHOPPING: ShoppingItem[] = [
-  { id: '1', name: 'Milk', quantity: '2 gallons', category: 'Dairy', checked: false, addedBy: '2', createdAt: new Date().toISOString() },
-  { id: '2', name: 'Apples', quantity: '1 bag', category: 'Produce', checked: false, addedBy: '3', createdAt: new Date().toISOString() },
-  { id: '3', name: 'Bread', quantity: '1 loaf', category: 'Bakery', checked: true, addedBy: '1', createdAt: new Date().toISOString() },
+  { id: '1', name: 'Milk', quantity: '2 gallons', category: 'Dairy', store: 'Whole Foods', checked: false, addedBy: '2', createdAt: new Date().toISOString() },
+  { id: '2', name: 'Apples', quantity: '1 bag', category: 'Produce', store: 'Whole Foods', checked: false, addedBy: '3', createdAt: new Date().toISOString() },
+  { id: '3', name: 'Bread', quantity: '1 loaf', category: 'Bakery', store: 'Trader Joes', checked: false, addedBy: '1', createdAt: new Date().toISOString() },
+  { id: '4', name: 'Olive Oil', quantity: '1 bottle', category: 'Other', store: 'Trader Joes', checked: false, addedBy: '2', createdAt: new Date().toISOString() },
+  { id: '5', name: 'Paper Towels', quantity: '12 pack', category: 'Household', store: 'Costco', checked: false, addedBy: '1', createdAt: new Date().toISOString() },
+  { id: '6', name: 'Chicken Breast', quantity: '5 lbs', category: 'Meat', store: 'Costco', checked: false, addedBy: '2', createdAt: new Date().toISOString() },
 ];
 
 const today = new Date();
@@ -77,7 +80,7 @@ interface FamilyContextType {
   updateShoppingItem: (id: string, updates: Partial<ShoppingItem>) => void;
   deleteShoppingItem: (id: string) => void;
   toggleShoppingItem: (id: string) => void;
-  clearCheckedItems: () => void;
+  clearCheckedItems: (store?: string) => void;
   // Events
   addEvent: (event: Omit<FamilyEvent, 'id' | 'createdAt'>) => void;
   updateEvent: (id: string, updates: Partial<FamilyEvent>) => void;
@@ -160,8 +163,13 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }));
   }, [setState]);
 
-  const clearCheckedItems = useCallback(() => {
-    setState(s => ({ ...s, shoppingItems: s.shoppingItems.filter(i => !i.checked) }));
+  const clearCheckedItems = useCallback((store?: string) => {
+    setState(s => ({
+      ...s,
+      shoppingItems: s.shoppingItems.map(i =>
+        !store || i.store === store ? { ...i, checked: false } : i
+      ),
+    }));
   }, [setState]);
 
   // Events

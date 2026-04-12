@@ -25,6 +25,8 @@ export interface Chore {
   completedAt: string | null;
 }
 
+export type ShoppingStore = 'Whole Foods' | 'Trader Joes' | 'Costco' | 'Target';
+
 export type ShoppingCategory =
   | 'Produce'
   | 'Dairy'
@@ -42,6 +44,7 @@ export interface ShoppingItem {
   name: string;
   quantity: string;
   category: ShoppingCategory;
+  store: ShoppingStore;
   checked: boolean;
   addedBy: string | null; // FamilyMember id
   createdAt: string;

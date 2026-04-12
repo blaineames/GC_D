@@ -3,7 +3,16 @@ import { Plus, Trash2, Check, ShoppingCart } from 'lucide-react';
 import { useFamily } from '../context/FamilyContext';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
-import type { ShoppingCategory, ShoppingItem } from '../types';
+import type { ShoppingCategory, ShoppingItem, ShoppingStore } from '../types';
+
+const STORES: ShoppingStore[] = ['Whole Foods', 'Trader Joes', 'Costco', 'Target'];
+
+const STORE_EMOJI: Record<ShoppingStore, string> = {
+  'Whole Foods': '🌿',
+  'Trader Joes': '🌺',
+  'Costco': '🏪',
+  'Target': '🎯',
+};
 
 const CATEGORIES: ShoppingCategory[] = [
   'Produce', 'Dairy', 'Meat', 'Bakery', 'Frozen',
@@ -28,41 +37,55 @@ interface ItemForm {
   name: string;
   quantity: string;
   category: ShoppingCategory;
-  addedBy: string;
+  store: ShoppingStore;
 }
-
-const DEFAULT_FORM: ItemForm = { name: '', quantity: '', category: 'Other', addedBy: '' };
 
 export function Shopping() {
   const { state, addShoppingItem, deleteShoppingItem, toggleShoppingItem, clearCheckedItems } = useFamily();
+  const [activeStore, setActiveStore] = useState<ShoppingStore>('Whole Foods');
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState<ItemForm>(DEFAULT_FORM);
+  const [form, setForm] = useState<ItemForm>({ name: '', quantity: '', category: 'Other', store: activeStore });
   const [quickAdd, setQuickAdd] = useState('');
 
+  const storeItems = useMemo(() => state.shoppingItems.filter(i => i.store === activeStore), [state.shoppingItems, activeStore]);
+
   const grouped = useMemo(() => {
-    const unchecked = state.shoppingItems.filter(i => !i.checked);
-    const checked = state.shoppingItems.filter(i => i.checked);
+    const unchecked = storeItems.filter(i => !i.checked);
+    const checked = storeItems.filter(i => i.checked);
     const groups: Record<string, ShoppingItem[]> = {};
     unchecked.forEach(item => {
       if (!groups[item.category]) groups[item.category] = [];
       groups[item.category].push(item);
     });
     return { groups, checked, unchecked };
+  }, [storeItems]);
+
+  const storeCounts = useMemo(() => {
+    const counts: Record<ShoppingStore, number> = { 'Whole Foods': 0, 'Trader Joes': 0, 'Costco': 0, 'Target': 0 };
+    state.shoppingItems.forEach(i => { if (!i.checked) counts[i.store]++; });
+    return counts;
   }, [state.shoppingItems]);
+
+  const handleOpenModal = () => {
+    setForm({ name: '', quantity: '', category: 'Other', store: activeStore });
+    setModalOpen(true);
+  };
 
   const handleSave = () => {
     if (!form.name.trim()) return;
-    addShoppingItem({ ...form, name: form.name.trim(), addedBy: form.addedBy || null, checked: false });
-    setForm(DEFAULT_FORM);
+    addShoppingItem({ ...form, name: form.name.trim(), addedBy: null, checked: false });
+    setForm({ name: '', quantity: '', category: 'Other', store: activeStore });
     setModalOpen(false);
   };
 
   const handleQuickAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && quickAdd.trim()) {
-      addShoppingItem({ name: quickAdd.trim(), quantity: '', category: 'Other', addedBy: null, checked: false });
+      addShoppingItem({ name: quickAdd.trim(), quantity: '', category: 'Other', store: activeStore, addedBy: null, checked: false });
       setQuickAdd('');
     }
   };
+
+  const checkedInStore = grouped.checked.length > 0;
 
   return (
     <div className="space-y-6">
@@ -75,13 +98,38 @@ export function Shopping() {
           </p>
         </div>
         <div className="flex gap-2">
-          {grouped.checked.length > 0 && (
-            <Button variant="secondary" size="sm" onClick={clearCheckedItems}>
-              Clear Checked
+          {checkedInStore && (
+            <Button variant="secondary" size="sm" onClick={() => clearCheckedItems(activeStore)}>
+              Uncheck All
             </Button>
           )}
-          <Button onClick={() => setModalOpen(true)} size="sm"><Plus size={16} /> Add Item</Button>
+          <Button onClick={handleOpenModal} size="sm"><Plus size={16} /> Add Item</Button>
         </div>
+      </div>
+
+      {/* Store tabs */}
+      <div className="flex gap-2">
+        {STORES.map(store => (
+          <button
+            key={store}
+            onClick={() => setActiveStore(store)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+              activeStore === store
+                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <span>{STORE_EMOJI[store]}</span>
+            <span>{store}</span>
+            {storeCounts[store] > 0 && (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
+                activeStore === store ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {storeCounts[store]}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* Quick add */}
@@ -89,7 +137,7 @@ export function Shopping() {
         <ShoppingCart size={18} className="text-gray-400 shrink-0" />
         <input
           className="flex-1 text-sm focus:outline-none placeholder:text-gray-300"
-          placeholder="Quick add — type an item and press Enter..."
+          placeholder={`Quick add to ${activeStore} — type an item and press Enter...`}
           value={quickAdd}
           onChange={e => setQuickAdd(e.target.value)}
           onKeyDown={handleQuickAdd}
@@ -97,10 +145,10 @@ export function Shopping() {
       </div>
 
       {/* Empty state */}
-      {state.shoppingItems.length === 0 ? (
+      {storeItems.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
-          <p className="text-4xl mb-3">🛒</p>
-          <p className="text-gray-500">Your shopping list is empty!</p>
+          <p className="text-4xl mb-3">{STORE_EMOJI[activeStore]}</p>
+          <p className="text-gray-500">No items for {activeStore} yet!</p>
           <p className="text-gray-400 text-sm mt-1">Add items to get started.</p>
         </div>
       ) : (
@@ -147,26 +195,28 @@ export function Shopping() {
               autoFocus
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-              <input
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                placeholder="e.g. 2 boxes"
-                value={form.quantity}
-                onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Added by</label>
-              <select
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                value={form.addedBy}
-                onChange={e => setForm(f => ({ ...f, addedBy: e.target.value }))}
-              >
-                <option value="">Unknown</option>
-                {state.members.map(m => <option key={m.id} value={m.id}>{m.avatar} {m.name}</option>)}
-              </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+            <input
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="e.g. 2 boxes"
+              value={form.quantity}
+              onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Store</label>
+            <div className="flex gap-2">
+              {STORES.map(store => (
+                <button
+                  key={store}
+                  onClick={() => setForm(f => ({ ...f, store }))}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium border transition-all ${form.store === store ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                >
+                  <span>{STORE_EMOJI[store]}</span>
+                  <span>{store}</span>
+                </button>
+              ))}
             </div>
           </div>
           <div>
